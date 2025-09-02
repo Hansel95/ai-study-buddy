@@ -1,0 +1,11 @@
+ai-study-buddy/
+  backend/
+    app.py
+    requirements.txt
+    Procfile
+  frontend/
+    index.html
+    styles.css
+    app.js
+  .env        # not committed; used locally
+  README.md
