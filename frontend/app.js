@@ -33,11 +33,10 @@ function render(cards) {
 }
 
 async function fetchExisting() {
-  const user = encodeURIComponent(userIdEl.value || "");
-  const url = user ? `/api/flashcards?user_id=${user}` : `/api/flashcards`;
-  const r = await fetch(url);
-  const data = await r.json();
-  render(data.flashcards || []);
+  // For demo purposes, load from localStorage
+  const stored = localStorage.getItem('flashcards');
+  const cards = stored ? JSON.parse(stored) : [];
+  render(cards);
 }
 
 generateBtn.addEventListener("click", async () => {
@@ -46,14 +45,15 @@ generateBtn.addEventListener("click", async () => {
   generateBtn.disabled = true;
   generateBtn.textContent = "Generating...";
   try {
-    const r = await fetch("/api/generate", {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ notes, user_id: userIdEl.value || null })
-    });
-    const data = await r.json();
-    if (data.error) throw new Error(data.error);
-    render(data.flashcards || []);
+    // Generate flashcards locally for demo
+    const flashcards = generateFlashcardsFromNotes(notes);
+    
+    // Store in localStorage
+    const existing = JSON.parse(localStorage.getItem('flashcards') || '[]');
+    const updated = [...flashcards, ...existing];
+    localStorage.setItem('flashcards', JSON.stringify(updated));
+    
+    render(flashcards);
   } catch (e) {
     alert("Error: " + e.message);
   } finally {
@@ -64,3 +64,37 @@ generateBtn.addEventListener("click", async () => {
 
 userIdEl.addEventListener("change", fetchExisting);
 window.addEventListener("load", fetchExisting);
+
+function generateFlashcardsFromNotes(notes) {
+  // Simple local flashcard generator
+  const sentences = notes.split(/[.!?]+/).filter(s => s.trim().length > 10);
+  const flashcards = [];
+  
+  for (let i = 0; i < Math.min(5, sentences.length); i++) {
+    const sentence = sentences[i].trim();
+    const words = sentence.split(' ').filter(w => w.length > 3);
+    const keyWord = words[Math.floor(Math.random() * words.length)] || 'concept';
+    
+    flashcards.push({
+      question: `What is the main point about ${keyWord.toLowerCase()}?`,
+      answer: sentence,
+      created_at: new Date().toISOString(),
+      user_id: userIdEl.value || 'demo'
+    });
+  }
+  
+  // If we don't have enough sentences, create some generic questions
+  while (flashcards.length < 5) {
+    const topics = ['key concepts', 'main ideas', 'important details', 'core principles', 'essential facts'];
+    const topic = topics[flashcards.length % topics.length];
+    
+    flashcards.push({
+      question: `What are the ${topic} from these notes?`,
+      answer: notes.substring(0, 200) + (notes.length > 200 ? '...' : ''),
+      created_at: new Date().toISOString(),
+      user_id: userIdEl.value || 'demo'
+    });
+  }
+  
+  return flashcards;
+}
